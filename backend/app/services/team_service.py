@@ -21,30 +21,25 @@ class TeamService:
         Args:
             game_state: Current game state to add teams to
         """
-        try:
-            # Create Team 0
-            team_0 = Team(
-                id=0,
-                name="Team 1",
-                score=0,
-                players=[]
-            )
-            
-            # Create Team 1
-            team_1 = Team(
-                id=1,
-                name="Team 2",
-                score=0,
-                players=[]
-            )
-            
-            game_state.teams = [team_0, team_1]
-            
-            logger.info(f"Teams created for game {game_state.game_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to create teams: {str(e)}")
-            raise
+        # Create Team 0
+        team_0 = Team(
+            id=0,
+            name="Team 1",
+            score=0,
+            players=[]
+        )
+        
+        # Create Team 1
+        team_1 = Team(
+            id=1,
+            name="Team 2",
+            score=0,
+            players=[]
+        )
+        
+        game_state.teams = [team_0, team_1]
+        
+        logger.info(f"Teams created for game {game_state.game_id}")
     
     def get_team_by_id(self, game_state: GameState, team_id: int) -> Optional[Team]:
         """
@@ -286,6 +281,7 @@ class TeamService:
         """
         return self.get_team_players(game_state, team_id)
     
+    # TODO: Voting? First come first serve? Random?
     def choose_next_player(self, game_state: GameState, team_id: int, preferred_player_id: Optional[str] = None) -> Optional[str]:
         """
         Choose the next player to take a turn for a team.

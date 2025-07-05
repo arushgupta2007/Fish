@@ -397,21 +397,25 @@ class ActionValidators:
             raise ValidationError("Invalid card object")
         
         # Validate rank
-        valid_ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'Joker']
+        valid_ranks = [rank.value for rank in CardRank]
+
         if card.rank not in valid_ranks:
             raise ValidationError(f"Invalid card rank: {card.rank}")
         
         # Validate suit
-        valid_suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Joker']
+        # valid_suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Joker']
+        valid_suits = [suit.value for suit in CardSuit]
         if card.suit not in valid_suits:
             raise ValidationError(f"Invalid card suit: {card.suit}")
         
         # Validate joker consistency
-        if card.rank == 'Joker' and card.suit != 'Joker':
+        if card.rank == CardRank.JOKER and card.suit != CardSuit.JOKER:
+            raise ValidationError("Joker card must have Joker suit")
+        if card.rank == CardRank.CUT and card.suit != CardSuit.JOKER:
             raise ValidationError("Joker card must have Joker suit")
         
-        if card.suit == 'Joker' and card.rank != 'Joker':
-            raise ValidationError("Joker suit must have Joker rank")
+        if card.suit == CardSuit.JOKER and card.rank != CardRank.JOKER and card.rank != CardRank.CUT:
+            raise ValidationError("Joker suit must have Joker or Cut rank")
         
         return True
     

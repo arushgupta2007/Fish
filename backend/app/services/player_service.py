@@ -3,7 +3,7 @@ import logging
 from copy import deepcopy
 
 from ..models.game_models import GameState, Player, Team, Card
-from ..utils.validators import validate_player_id, validate_game_id
+from ..utils.validators import validate_player_id, validate_game_id, validate_player_name
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ class PlayerService:
             if not validate_player_id(player_id):
                 raise ValueError("Invalid player ID")
             
-            if not player_name or len(player_name.strip()) == 0:
+            player_name = player_name.strip()
+            if not validate_player_name(player_name):
                 raise ValueError("Player name cannot be empty")
             
             if len(player_name) > 50:
@@ -60,7 +61,7 @@ class PlayerService:
             # Create new player
             new_player = Player(
                 id=player_id,
-                name=player_name.strip(),
+                name=player_name,
                 team_id=team_id,
                 hand=[],  # Empty hand initially
                 num_cards=0
@@ -81,6 +82,7 @@ class PlayerService:
             logger.error(f"Failed to add player to game: {str(e)}")
             raise
     
+    # TODO: All host to assign the teams
     def _assign_player_to_team(self, game_state: GameState) -> int:
         """
         Assign a player to a team, balancing team sizes.
@@ -365,11 +367,7 @@ class PlayerService:
             bool: True if player can claim, False otherwise
         """
         player = self.get_player_by_id(game_state, player_id)
-        if not player:
-            return False
-        
-        # Players can claim even with 0 cards
-        return True
+        return not not player
     
     def get_player_stats(self, game_state: GameState, player_id: str) -> Dict[str, Any]:
         """

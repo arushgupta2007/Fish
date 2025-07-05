@@ -2,9 +2,7 @@ from typing import List, Optional, Dict, Union
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 
-from .enums import GameStatus
-
-from .enums import ClaimOutcome
+from .enums import GameStatus, ClaimOutcome, CardRank, CardSuit
 
 class Card(BaseModel):
     rank: str  # '2'-'A', 'Joker'
@@ -14,14 +12,14 @@ class Card(BaseModel):
 
     @validator('rank')
     def validate_rank(cls, v):
-        valid_ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'Joker']
+        valid_ranks = [rank.value for rank in CardRank]
         if v not in valid_ranks:
             raise ValueError(f'Invalid rank: {v}')
         return v
 
     @validator('suit')
     def validate_suit(cls, v):
-        valid_suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Joker']
+        valid_suits = [suit.value for suit in CardSuit]
         if v not in valid_suits:
             raise ValueError(f'Invalid suit: {v}')
         return v

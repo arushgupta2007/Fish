@@ -1,5 +1,6 @@
 import random
 from typing import List, Dict
+from app.models.enums import CardRank, CardSuit
 from app.models.game_models import Card, Player
 from app.core.half_suit_definitions import get_half_suit_id
 
@@ -20,8 +21,21 @@ class DeckManager:
             List of all cards in the deck
         """
         deck = []
-        suits = ["Spades", "Hearts", "Diamonds", "Clubs"]
-        ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+        suits = [CardSuit.SPADES, CardSuit.HEARTS, CardSuit.DIAMONDS, CardSuit.CLUBS]
+        ranks = [
+            CardRank.TWO,
+            CardRank.THREE,
+            CardRank.FOUR,
+            CardRank.FIVE,
+            CardRank.SIX,
+            CardRank.SEVEN,
+            CardRank.NINE,
+            CardRank.TEN,
+            CardRank.JACK,
+            CardRank.QUEEN,
+            CardRank.KING,
+            CardRank.ACE
+        ]
         
         # Create standard 52 cards
         for suit in suits:
@@ -37,15 +51,36 @@ class DeckManager:
                 )
                 deck.append(card)
         
-        # Add 2 jokers
-        for i, joker_id in enumerate(["A", "B"]):
-            card = Card(
-                rank="Joker",
-                suit="Joker",
-                half_suit_id=8,  # 8s + Jokers half suit
-                unique_id=f"Joker-{joker_id}"
-            )
-            deck.append(card)
+        for suit in suits:
+            deck.append(Card(
+                rank=CardRank.EIGHT,
+                suit=CardSuit.JOKER,
+                half_suit_id=8,
+                unique_id=f"{CardRank.EIGHT}{CardSuit.JOKER}"
+            ))
+
+        # Add joker, cut
+        deck.append(Card(
+            rank=CardRank.JOKER,
+            suit=CardSuit.JOKER,
+            half_suit_id=8,
+            unique_id=f"{CardRank.JOKER}{CardSuit.JOKER}"
+        ))
+        deck.append(Card(
+            rank=CardRank.CUT,
+            suit=CardSuit.JOKER,
+            half_suit_id=8,
+            unique_id=f"{CardRank.CUT}{CardSuit.JOKER}"
+        ))
+
+        # for _, joker_id in enumerate(["A", "B"]):
+        #     card = Card(
+        #         rank="Joker",
+        #         suit="Joker",
+        #         half_suit_id=8,  # 8s + Jokers half suit
+        #         unique_id=f"Joker-{joker_id}"
+        #     )
+        #     deck.append(card)
         
         self.deck = deck
         return deck

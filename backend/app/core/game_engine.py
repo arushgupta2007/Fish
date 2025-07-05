@@ -52,6 +52,8 @@ class GameEngine:
             
             self.games[game_id] = game_state
             logger.info(f"Created game {game_id}")
+
+            self.join_game(game_id, creator_name)
             
             return {"success": True, "game_state": game_state}
             
@@ -77,7 +79,7 @@ class GameEngine:
             if any(p.name == player_name for p in game_state.players):
                 return {"success": False, "error": "Player name already taken"}
             
-            # Generate unique player ID
+            # Generate unique player ID TODO: Chnage this?
             player_id = f"player_{len(game_state.players) + 1}_{random.randint(1000, 9999)}"
             
             # Assign to team (alternate assignment)
@@ -134,16 +136,16 @@ class GameEngine:
                 return {"success": False, "error": "Need exactly 6 players to start"}
             
             # Create deck and deal cards
-            deck = self.deck_manager.create_deck()
-            dealt_hands = self.deck_manager.deal_cards(deck, 6)
+            self.deck_manager.create_deck()
+            dealt_hands = self.deck_manager.deal_cards(game_state.players)
             
             # Assign cards to players
-            for i, player in enumerate(game_state.players):
-                player.hand = dealt_hands[i]
+            for player in game_state.players:
+                player.hand = dealt_hands[player]
                 player.num_cards = len(player.hand)
             
             # Initialize half suits
-            game_state.half_suits = self.half_suit_definitions.create_half_suits(deck)
+            game_state.half_suits = self.half_suit_definitions.create_half_suits()
             
             # Set random starting team and player
             game_state.current_team = random.choice([1, 2])
@@ -175,14 +177,14 @@ class GameEngine:
             
             asker = self._get_player(game_state, asker_id)
             target = self._get_player(game_state, target_id)
+
+            if asker is None or target is None:
+                return {"success": False, "error": "Invalid Ask Endpoints"}
             
             # Check if target has the card
             card_found = False
             for target_card in target.hand:
-                if (target_card.rank == card.rank and 
-                    target_card.suit == card.suit and
-                    target_card.unique_id == card.unique_id):
-                    
+                if target_card.unique_id == card.unique_id:
                     # Transfer card
                     target.hand.remove(target_card)
                     asker.hand.append(target_card)
@@ -240,24 +242,19 @@ class GameEngine:
             
             claimant = self._get_player(game_state, claimant_id)
             half_suit = self._get_half_suit(game_state, half_suit_id)
+
+            if claimant is None:
+                return {"success": False, "error": "Player not found"}
             
             # Validate the claim using claim validator
             claim_result = self.claim_validator.validate_claim(
-                game_state, half_suit_id, assignments, claim_for_other_team
+                game_state, claimant_id, half_suit_id, assignments, claim_for_other_team
             )
             
             turn_number = len(game_state.ask_history) + len(game_state.claim_history) + 1
-            
+
             # Handle different claim scenarios
-            if claim_result["scenario"] == "all_claiming_team":
-                # All cards with claiming team - resolve immediately
-                outcome, point_to = self._resolve_immediate_claim(
-                    game_state, claimant.team_id, claim_result["correct"]
-                )
-                self._finalize_claim(game_state, half_suit_id, claimant.team_id if claim_result["correct"] else 
-                                   (2 if claimant.team_id == 1 else 1))
-                
-            elif claim_result["scenario"] == "all_opposing_team":
+            if claim_result["scenario"] == "all_opposing_team":
                 # All cards with opposing team - needs counter-claim
                 self.pending_counter_claims[game_id] = {
                     "claimant_id": claimant_id,
@@ -276,12 +273,20 @@ class GameEngine:
                     "turn": turn_number,
                     "game_state": game_state
                 }
-                
-            elif claim_result["scenario"] == "split_teams":
+            
+            if claim_result["scenario"] == "all_claiming_team":
+                # All cards with claiming team - resolve immediately
+                outcome, point_to = self._resolve_immediate_claim(
+                    game_state, claimant.team_id, claim_result.is_correct
+                )
+                self._finalize_claim(game_state, half_suit_id, claimant.team_id if claim_result.is_correct else 
+                                   (2 if claimant.team_id == 1 else 1))
+            else:
+                # claim_result["scenario"] == "split_teams":
                 if claim_for_other_team:
                     # Claim for other team - resolve based on accuracy
                     outcome, point_to = self._resolve_other_team_claim(
-                        game_state, claimant.team_id, claim_result["correct"]
+                        game_state, claimant.team_id, claim_result.is_correct
                     )
                 else:
                     # Regular claim on split cards - automatically incorrect
@@ -341,21 +346,24 @@ class GameEngine:
             
             # Validate counter-claim
             counter_claimant = self._get_player(game_state, counter_claimant_id)
+            if counter_claimant is None:
+                return {"success": False, "error": "Player not found"}
+
             if counter_claimant.team_id != pending_claim["opposing_team_id"]:
                 return {"success": False, "error": "Counter-claimant not on opposing team"}
             
             # Validate the counter-claim assignments
             counter_result = self.claim_validator.validate_counter_claim(
-                game_state, half_suit_id, assignments, pending_claim["opposing_team_id"]
+                game_state, counter_claimant_id, half_suit_id, assignments
             )
             
             # Determine outcome
-            if counter_result["correct"]:
+            if counter_result.is_correct:
                 outcome = ClaimOutcome.COUNTER_CORRECT
                 point_to = pending_claim["opposing_team_id"]
             else:
                 outcome = ClaimOutcome.COUNTER_INCORRECT
-                point_to = self._get_player(game_state, pending_claim["claimant_id"]).team_id
+                point_to = 2 if counter_claimant.team_id == 1 else 1
             
             # Finalize the claim
             self._finalize_claim(game_state, half_suit_id, point_to)
@@ -409,6 +417,9 @@ class GameEngine:
             game_state = self.games[game_id]
             setter = self._get_player(game_state, setter_id)
             chosen_player = self._get_player(game_state, chosen_player_id)
+
+            if setter is None or chosen_player is None:
+                return {"success": False, "error": "Player not found"}
             
             # Validate that setter is on the current team
             if setter.team_id != game_state.current_team:
@@ -499,10 +510,10 @@ class GameEngine:
             return {"valid": False, "error": "Cannot ask teammate"}
         
         # Check if asker has a card of the same half suit
-        card_half_suit = self.half_suit_definitions.get_half_suit_for_card(card)
+        card_half_suit = self.half_suit_definitions.get_half_suit_id(card)
         has_half_suit_card = False
         for asker_card in asker.hand:
-            if self.half_suit_definitions.get_half_suit_for_card(asker_card) == card_half_suit:
+            if self.half_suit_definitions.get_half_suit_id(asker_card) == card_half_suit:
                 has_half_suit_card = True
                 break
         
@@ -572,17 +583,19 @@ class GameEngine:
         
         # Mark half suit as out of play
         half_suit = self._get_half_suit(game_state, half_suit_id)
-        half_suit.out_of_play = True
-        half_suit.claimed_by = winning_team
-        
-        # Remove cards from player hands
-        for card in half_suit.cards:
-            for player in game_state.players:
-                for hand_card in player.hand[:]:  # Create copy to avoid modification during iteration
-                    if hand_card.unique_id == card.unique_id:
-                        player.hand.remove(hand_card)
-                        player.num_cards -= 1
-                        break
+
+        if half_suit is not None:
+            half_suit.out_of_play = True
+            half_suit.claimed_by = winning_team
+            
+            # Remove cards from player hands
+            for card in half_suit.cards:
+                for player in game_state.players:
+                    for hand_card in player.hand[:]:  # Create copy to avoid modification during iteration
+                        if hand_card.unique_id == card.unique_id:
+                            player.hand.remove(hand_card)
+                            player.num_cards -= 1
+                            break
     
     def _choose_next_player(self, game_state: GameState) -> Optional[str]:
         """Choose the next player for the current team"""

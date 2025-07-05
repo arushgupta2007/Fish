@@ -318,7 +318,7 @@ class ClaimValidator:
         """
         logger.info("All cards with opposing team - counter-claim required")
         return ClaimResult(
-            outcome="awaiting_counter_claim",  # Special status for pending counter-claim
+            outcome=ClaimOutcome.AWAITING_COUNTER,  # Special status for pending counter-claim
             winning_team=0,  # TBD based on counter-claim
             requires_counter_claim=True,
             is_correct=False

@@ -14,6 +14,7 @@ class GameStatus(str, Enum):
     LOBBY = "lobby"
     ACTIVE = "active"
     FINISHED = "finished"
+    WAITING_FOR_COUNTER_CLAIM = "awaiting counter claim"
 
 
 class CardRank(str, Enum):
@@ -32,6 +33,7 @@ class CardRank(str, Enum):
     KING = "K"
     ACE = "A"
     JOKER = "Joker"
+    CUT = "Cut"
 
 
 class CardSuit(str, Enum):
@@ -65,6 +67,7 @@ class ClaimOutcome(str, Enum):
     OTHER_TEAM_CORRECT = "other_team_correct"
     OTHER_TEAM_INCORRECT = "other_team_incorrect"
     SPLIT_AUTO_INCORRECT = "split_auto_incorrect"
+    AWAITING_COUNTER = "awaiting_counter_claim"
 
 
 class TeamId(IntEnum):

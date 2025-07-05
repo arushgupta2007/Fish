@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Any
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import threading
 from ..models.game_models import GameState, Player, Team, Card, HalfSuit, AskRecord, ClaimRecord
 
@@ -54,8 +54,8 @@ class GameStateManager:
             
             self._games[game_id] = game_state
             self._game_metadata[game_id] = {
-                "created_at": datetime.utcnow(),
-                "last_updated": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
+                "last_updated": datetime.now(timezone.utc),
                 "player_count": len(game_state.players),
                 "status": game_state.status
             }
@@ -92,7 +92,7 @@ class GameStateManager:
                 return None
             
             # Update last accessed time
-            self._game_metadata[game_id]["last_updated"] = datetime.utcnow()
+            self._game_metadata[game_id]["last_updated"] = datetime.now(timezone.utc)
             
             # Return a copy to prevent external modification
             return self._deep_copy_game_state(self._games[game_id])
@@ -118,7 +118,7 @@ class GameStateManager:
             
             # Update metadata
             self._game_metadata[game_id].update({
-                "last_updated": datetime.utcnow(),
+                "last_updated": datetime.now(timezone.utc),
                 "player_count": len(game_state.players),
                 "status": game_state.status
             })
@@ -233,7 +233,7 @@ class GameStateManager:
         Returns:
             Number of games cleaned up
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
         games_to_remove = []
         
         with self._lock:
@@ -262,8 +262,9 @@ class GameStateManager:
                 import time
                 time.sleep(self._cleanup_interval.total_seconds())
                 
+                # TODO: Reuse function above
                 # Clean up expired games
-                cutoff_time = datetime.utcnow() - self._game_timeout
+                cutoff_time = datetime.now(timezone.utc) - self._game_timeout
                 games_to_remove = []
                 
                 with self._lock:
@@ -332,8 +333,8 @@ class GameStateManager:
                 
                 self._games[game_id] = game_state
                 self._game_metadata[game_id] = game_data.get("metadata", {
-                    "created_at": datetime.utcnow(),
-                    "last_updated": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
+                    "last_updated": datetime.now(timezone.utc),
                     "player_count": len(game_state.players),
                     "status": game_state.status
                 })
@@ -391,4 +392,4 @@ class GameStateManager:
             if game_id not in self._game_metadata:
                 return None
             
-            return datetime.utcnow() - self._game_metadata[game_id]["created_at"]
+            return datetime.now(timezone.utc) - self._game_metadata[game_id]["created_at"]
