@@ -373,3 +373,8 @@ user_uploads/
 # Temporary files
 *.tmp
 *.temp
+
+# Nixos
+.direnv
+.envrc
+shell.nix
