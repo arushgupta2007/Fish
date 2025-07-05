@@ -1,26 +1,17 @@
-from typing import Dict, List, Optional, NamedTuple
+from typing import Dict, List, Optional, NamedTuple, Any
 import logging
-from enum import Enum
 
 from ..models.game_models import GameState, Player, HalfSuit, Card
 
 logger = logging.getLogger(__name__)
 
 
-class ClaimOutcome(Enum):
-    """Possible outcomes for claims and counter-claims."""
-    OWN_TEAM_CORRECT = "own_team_correct"
-    OWN_TEAM_INCORRECT = "own_team_incorrect"
-    COUNTER_CORRECT = "counter_correct"
-    COUNTER_INCORRECT = "counter_incorrect"
-    OTHER_TEAM_CORRECT = "other_team_correct"
-    OTHER_TEAM_INCORRECT = "other_team_incorrect"
-    SPLIT_AUTO_INCORRECT = "split_auto_incorrect"
+from ..models.enums import ClaimOutcome
 
 
 class ClaimResult(NamedTuple):
     """Result of a claim validation."""
-    outcome: str
+    outcome: ClaimOutcome
     winning_team: int
     requires_counter_claim: bool = False
     is_correct: bool = False
@@ -41,7 +32,7 @@ class ClaimValidator:
         """Initialize the claim validator."""
         logger.info("ClaimValidator initialized")
     
-    def validate_claim(self, game_state: GameState, claimant_id: str, half_suit_id: int, 
+    def validate_claim(self, game_state: GameState, claimant_id: str | None, half_suit_id: int, 
                       assignments: Dict[str, str], claim_for_other_team: bool = False) -> ClaimResult:
         """
         Validate a claim and determine the outcome.
@@ -58,6 +49,8 @@ class ClaimValidator:
         """
         try:
             # Find the claimant and their team
+            if claimant_id is None:
+                raise ValueError("claimant_id required")
             claimant = self._find_player(game_state, claimant_id)
             claimant_team = claimant.team_id
             opposing_team = 2 if claimant_team == 1 else 1
@@ -96,7 +89,7 @@ class ClaimValidator:
             logger.error(f"Error validating claim: {e}")
             # Default to incorrect claim for claimant's team
             return ClaimResult(
-                outcome=ClaimOutcome.OWN_TEAM_INCORRECT.value,
+                outcome=ClaimOutcome.OWN_TEAM_INCORRECT,
                 winning_team=2 if claimant_team == 1 else 1,
                 requires_counter_claim=False,
                 is_correct=False
@@ -134,7 +127,7 @@ class ClaimValidator:
             if cards_with_counter_team != 6:
                 logger.warning(f"Counter-claim attempted but not all cards with counter-claiming team")
                 return ClaimResult(
-                    outcome=ClaimOutcome.COUNTER_INCORRECT.value,
+                    outcome=ClaimOutcome.COUNTER_INCORRECT,
                     winning_team=original_team,
                     requires_counter_claim=False,
                     is_correct=False
@@ -146,7 +139,7 @@ class ClaimValidator:
             if is_correct:
                 logger.info(f"Counter-claim correct by {counter_claimant.name}")
                 return ClaimResult(
-                    outcome=ClaimOutcome.COUNTER_CORRECT.value,
+                    outcome=ClaimOutcome.COUNTER_CORRECT,
                     winning_team=counter_team,
                     requires_counter_claim=False,
                     is_correct=True
@@ -154,7 +147,7 @@ class ClaimValidator:
             else:
                 logger.info(f"Counter-claim incorrect by {counter_claimant.name}")
                 return ClaimResult(
-                    outcome=ClaimOutcome.COUNTER_INCORRECT.value,
+                    outcome=ClaimOutcome.COUNTER_INCORRECT,
                     winning_team=original_team,
                     requires_counter_claim=False,
                     is_correct=False
@@ -164,7 +157,7 @@ class ClaimValidator:
             logger.error(f"Error validating counter-claim: {e}")
             # Default to incorrect counter-claim
             return ClaimResult(
-                outcome=ClaimOutcome.COUNTER_INCORRECT.value,
+                outcome=ClaimOutcome.COUNTER_INCORRECT,
                 winning_team=2 if counter_team == 1 else 1,
                 requires_counter_claim=False,
                 is_correct=False
@@ -184,7 +177,7 @@ class ClaimValidator:
                 return half_suit
         raise ValueError(f"Half suit {half_suit_id} not found")
     
-    def _get_actual_card_locations(self, game_state: GameState, half_suit: HalfSuit) -> Dict[str, Dict[str, any]]:
+    def _get_actual_card_locations(self, game_state: GameState, half_suit: HalfSuit) -> Dict[str, Dict[str, Any]]:
         """
         Get the actual locations of all cards in a half suit.
         
@@ -218,8 +211,8 @@ class ClaimValidator:
         
         return locations
     
-    def _analyze_card_distribution(self, actual_locations: Dict[str, Dict[str, any]], 
-                                 claiming_team: int) -> Dict[str, any]:
+    def _analyze_card_distribution(self, actual_locations: Dict[str, Dict[str, Any]], 
+                                 claiming_team: int) -> Dict[str, Any]:
         """
         Analyze how cards are distributed between teams.
         
@@ -250,7 +243,7 @@ class ClaimValidator:
         }
     
     def _check_assignments_correctness(self, assignments: Dict[str, str], 
-                                     actual_locations: Dict[str, Dict[str, any]]) -> bool:
+                                     actual_locations: Dict[str, Dict[str, Any]]) -> bool:
         """
         Check if the claimed assignments match the actual card locations.
         
@@ -274,7 +267,7 @@ class ClaimValidator:
         return True
     
     def _handle_all_cards_with_claiming_team(self, assignments: Dict[str, str], 
-                                           actual_locations: Dict[str, Dict[str, any]], 
+                                           actual_locations: Dict[str, Dict[str, Any]], 
                                            claiming_team: int) -> ClaimResult:
         """
         Handle case where all 6 cards are with the claiming team.
@@ -292,7 +285,7 @@ class ClaimValidator:
         if is_correct:
             logger.info("Claim correct - all cards with claiming team")
             return ClaimResult(
-                outcome=ClaimOutcome.OWN_TEAM_CORRECT.value,
+                outcome=ClaimOutcome.OWN_TEAM_CORRECT,
                 winning_team=claiming_team,
                 requires_counter_claim=False,
                 is_correct=True
@@ -301,14 +294,14 @@ class ClaimValidator:
             opposing_team = 2 if claiming_team == 1 else 1
             logger.info("Claim incorrect - all cards with claiming team but wrong assignments")
             return ClaimResult(
-                outcome=ClaimOutcome.OWN_TEAM_INCORRECT.value,
+                outcome=ClaimOutcome.OWN_TEAM_INCORRECT,
                 winning_team=opposing_team,
                 requires_counter_claim=False,
                 is_correct=False
             )
     
     def _handle_all_cards_with_opposing_team(self, assignments: Dict[str, str], 
-                                           actual_locations: Dict[str, Dict[str, any]], 
+                                           actual_locations: Dict[str, Dict[str, Any]], 
                                            claiming_team: int, opposing_team: int) -> ClaimResult:
         """
         Handle case where all 6 cards are with the opposing team.
@@ -345,14 +338,14 @@ class ClaimValidator:
         """
         logger.info("Cards split between teams - claim automatically incorrect")
         return ClaimResult(
-            outcome=ClaimOutcome.SPLIT_AUTO_INCORRECT.value,
+            outcome=ClaimOutcome.SPLIT_AUTO_INCORRECT,
             winning_team=opposing_team,
             requires_counter_claim=False,
             is_correct=False
         )
     
     def _handle_claim_for_other_team(self, assignments: Dict[str, str], 
-                                   actual_locations: Dict[str, Dict[str, any]], 
+                                   actual_locations: Dict[str, Dict[str, Any]], 
                                    claiming_team: int, opposing_team: int) -> ClaimResult:
         """
         Handle "claim for other team" scenario.
@@ -375,7 +368,7 @@ class ClaimValidator:
         if is_correct:
             logger.info("Claim for other team correct")
             return ClaimResult(
-                outcome=ClaimOutcome.OTHER_TEAM_CORRECT.value,
+                outcome=ClaimOutcome.OTHER_TEAM_CORRECT,
                 winning_team=claiming_team,  # Claiming team wins even though they claimed for other team
                 requires_counter_claim=False,
                 is_correct=True
@@ -383,13 +376,13 @@ class ClaimValidator:
         else:
             logger.info("Claim for other team incorrect")
             return ClaimResult(
-                outcome=ClaimOutcome.OTHER_TEAM_INCORRECT.value,
+                outcome=ClaimOutcome.OTHER_TEAM_INCORRECT,
                 winning_team=opposing_team,
                 requires_counter_claim=False,
                 is_correct=False
             )
     
-    def get_claim_requirements(self, game_state: GameState, half_suit_id: int) -> Dict[str, any]:
+    def get_claim_requirements(self, game_state: GameState, half_suit_id: int) -> Dict[str, Any]:
         """
         Get requirements and options for claiming a specific half suit.
         
@@ -439,7 +432,7 @@ class ClaimValidator:
             }
     
     def validate_claim_assignments(self, game_state: GameState, half_suit_id: int, 
-                                 assignments: Dict[str, str], claim_for_other_team: bool = False) -> Dict[str, any]:
+                                 assignments: Dict[str, str], claim_for_other_team: bool = False) -> Dict[str, Any]:
         """
         Validate claim assignments without actually processing the claim.
         

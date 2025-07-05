@@ -11,6 +11,7 @@ from ..utils.game_state_manager import GameStateManager
 from ..core.deck_manager import DeckManager
 from ..core.claim_validator import ClaimValidator
 from ..core.half_suit_definitions import HalfSuitDefinitions
+from ..models.enums import GameStatus
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,6 @@ class GameService:
                 claim_history=[],
                 current_team=1,  # Will be randomized when game starts
                 current_player=None,  # Will be set when game starts
-                status="lobby"
             )
             
             # Save to state manager
@@ -126,7 +126,7 @@ class GameService:
             # Update game state
             game_state.current_team = starting_team
             game_state.current_player = starting_player.id
-            game_state.status = "active"
+            game_state.status = GameStatus.ACTIVE
             
             logger.info(f"Game {game_state.game_id} started. First turn: Team {starting_team}, Player {starting_player.name}")
             return game_state
@@ -252,7 +252,7 @@ class GameService:
         
         # Check if game is finished
         if self._is_game_finished(game_state):
-            game_state.status = "finished"
+            game_state.status = GameStatus.FINISHED
             logger.info(f"Game {game_state.game_id} finished")
         
         logger.info(f"Claim processed: {claimant.name} claimed half suit {half_suit_id}, outcome: {claim_result.outcome}")
@@ -311,7 +311,7 @@ class GameService:
         
         # Check if game is finished
         if self._is_game_finished(game_state):
-            game_state.status = "finished"
+            game_state.status = GameStatus.FINISHED
             logger.info(f"Game {game_state.game_id} finished")
         
         logger.info(f"Counter-claim processed for half suit {half_suit_id}, outcome: {counter_result.outcome}")

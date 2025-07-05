@@ -2,19 +2,9 @@ from typing import List, Optional, Dict, Union
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 
-class GameStatus(str, Enum):
-    LOBBY = "lobby"
-    ACTIVE = "active"
-    FINISHED = "finished"
+from .enums import GameStatus
 
-class ClaimOutcome(str, Enum):
-    OWN_TEAM_CORRECT = "own_team_correct"
-    OWN_TEAM_INCORRECT = "own_team_incorrect"
-    COUNTER_CORRECT = "counter_correct"
-    COUNTER_INCORRECT = "counter_incorrect"
-    OTHER_TEAM_CORRECT = "other_team_correct"
-    OTHER_TEAM_INCORRECT = "other_team_incorrect"
-    SPLIT_AUTO_INCORRECT = "split_auto_incorrect"
+from .enums import ClaimOutcome
 
 class Card(BaseModel):
     rank: str  # '2'-'A', 'Joker'

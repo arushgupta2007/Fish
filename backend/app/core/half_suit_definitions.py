@@ -289,3 +289,25 @@ def get_half_suit_progress() -> Dict[int, Dict[str, Any]]:
         }
     
     return progress
+
+# --- Back-compat shim -----------------------------------------
+class HalfSuitDefinitions:          # noqa: E302
+    """Tiny wrapper so legacy services can keep doing
+    HalfSuitDefinitions().foo() without changes."""
+    # Expose the existing module-level helpers
+    create_half_suits = staticmethod(create_half_suits)
+    get_half_suit_id = staticmethod(get_half_suit_id)
+    get_cards_in_half_suit = staticmethod(get_cards_in_half_suit)
+    get_half_suit_name = staticmethod(get_half_suit_name)
+    validate_half_suit_assignment = staticmethod(validate_half_suit_assignment)
+    cards_belong_to_same_half_suit = staticmethod(cards_belong_to_same_half_suit)
+
+__all__ = [
+    "HalfSuitDefinitions",          # make the wrapper importable
+    "create_half_suits",
+    "get_half_suit_id",
+    "get_cards_in_half_suit",
+    "get_half_suit_name",
+    "validate_half_suit_assignment",
+    "cards_belong_to_same_half_suit",
+]

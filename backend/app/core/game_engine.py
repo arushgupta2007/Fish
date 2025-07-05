@@ -14,23 +14,9 @@ from ..models.game_models import (
 from ..core.deck_manager import DeckManager
 from ..core.claim_validator import ClaimValidator
 from ..core.half_suit_definitions import HalfSuitDefinitions
+from ..models.enums import GameStatus, ClaimOutcome
 
 logger = logging.getLogger(__name__)
-
-class GameStatus(Enum):
-    LOBBY = "lobby"
-    ACTIVE = "active"
-    FINISHED = "finished"
-    WAITING_FOR_COUNTER_CLAIM = "waiting_for_counter_claim"
-
-class ClaimOutcome(Enum):
-    OWN_TEAM_CORRECT = "own_team_correct"
-    OWN_TEAM_INCORRECT = "own_team_incorrect"
-    COUNTER_CORRECT = "counter_correct"
-    COUNTER_INCORRECT = "counter_incorrect"
-    OTHER_TEAM_CORRECT = "other_team_correct"
-    OTHER_TEAM_INCORRECT = "other_team_incorrect"
-    SPLIT_AUTO_INCORRECT = "split_auto_incorrect"
 
 class GameEngine:
     """Core game engine handling all game logic and state management"""
@@ -61,7 +47,7 @@ class GameEngine:
                 claim_history=[],
                 current_team=1,
                 current_player=None,
-                status=GameStatus.LOBBY.value
+                status=GameStatus.LOBBY
             )
             
             self.games[game_id] = game_state
@@ -164,7 +150,7 @@ class GameEngine:
             team_players = [p for p in game_state.players if p.team_id == game_state.current_team]
             game_state.current_player = random.choice(team_players).id
             
-            game_state.status = GameStatus.ACTIVE.value
+            game_state.status = GameStatus.ACTIVE
             
             logger.info(f"Started game {game_id} with team {game_state.current_team} going first")
             
@@ -281,7 +267,7 @@ class GameEngine:
                     "opposing_team_id": 2 if claimant.team_id == 1 else 1
                 }
                 
-                game_state.status = GameStatus.WAITING_FOR_COUNTER_CLAIM.value
+                game_state.status = GameStatus.WAITING_FOR_COUNTER_CLAIM
                 
                 return {
                     "success": True,
@@ -310,7 +296,7 @@ class GameEngine:
                 claimant=claimant_id,
                 half_suit_id=half_suit_id,
                 assignments=assignments,
-                outcome=outcome.value,
+                outcome=outcome,
                 point_to=point_to
             )
             game_state.claim_history.append(claim_record)
@@ -324,7 +310,7 @@ class GameEngine:
             
             # Check if game is finished
             if self._is_game_finished(game_state):
-                game_state.status = GameStatus.FINISHED.value
+                game_state.status = GameStatus.FINISHED
             
             logger.info(f"Claim processed: {claimant_id} claimed half suit {half_suit_id}, outcome: {outcome.value}")
             
@@ -391,14 +377,14 @@ class GameEngine:
                 game_state.current_team = 2 if game_state.current_team == 1 else 1
             
             game_state.current_player = self._choose_next_player(game_state)
-            game_state.status = GameStatus.ACTIVE.value
+            game_state.status = GameStatus.ACTIVE
             
             # Clean up pending counter-claim
             del self.pending_counter_claims[game_id]
             
             # Check if game is finished
             if self._is_game_finished(game_state):
-                game_state.status = GameStatus.FINISHED.value
+                game_state.status = GameStatus.FINISHED
             
             logger.info(f"Counter-claim processed: {counter_claimant_id}, outcome: {outcome.value}")
             
@@ -529,7 +515,7 @@ class GameEngine:
                        half_suit_id: int, assignments: Dict[str, str]) -> Dict[str, Any]:
         """Validate a claim action"""
         # Check game status
-        if game_state.status not in [GameStatus.ACTIVE.value, GameStatus.WAITING_FOR_COUNTER_CLAIM.value]:
+        if game_state.status not in [GameStatus.ACTIVE, GameStatus.WAITING_FOR_COUNTER_CLAIM]:
             return {"valid": False, "error": "Game not in valid state for claims"}
         
         # Check if it's the claimant's team's turn

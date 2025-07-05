@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 # Create router instance
 router = APIRouter(prefix="/api", tags=["game"])
 
-app = FastAPI()
-
 # Request/Response models
 class CreateGameRequest(BaseModel):
     creator_name: str = Field(..., min_length=1, max_length=50)
