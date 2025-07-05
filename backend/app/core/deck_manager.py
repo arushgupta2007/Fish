@@ -230,4 +230,175 @@ class DeckManager:
         Returns:
             True if the player has the card
         """
-        player_cards = self.dealt_
+        player_cards = self.dealt_cards.get(player_id, [])
+        return any(card.unique_id == card_unique_id for card in player_cards)
+    
+    def player_has_half_suit_card(self, player_id: str, half_suit_id: int) -> bool:
+        """
+        Check if a player has any card from a specific half suit.
+        
+        Args:
+            player_id: The player's ID
+            half_suit_id: The half suit ID to check
+            
+        Returns:
+            True if the player has at least one card from the half suit
+        """
+        player_cards = self.dealt_cards.get(player_id, [])
+        return any(card.half_suit_id == half_suit_id for card in player_cards)
+    
+    def get_half_suit_cards_in_play(self, half_suit_id: int) -> List[Card]:
+        """
+        Get all cards from a specific half suit that are still in play.
+        
+        Args:
+            half_suit_id: The half suit ID
+            
+        Returns:
+            List of cards from the half suit that are still in players' hands
+        """
+        cards_in_play = []
+        for player_cards in self.dealt_cards.values():
+            for card in player_cards:
+                if card.half_suit_id == half_suit_id:
+                    cards_in_play.append(card)
+        return cards_in_play
+    
+    def get_half_suit_distribution(self, half_suit_id: int) -> Dict[str, List[Card]]:
+        """
+        Get the distribution of cards from a specific half suit across players.
+        
+        Args:
+            half_suit_id: The half suit ID
+            
+        Returns:
+            Dictionary mapping player_id to their cards from the half suit
+        """
+        distribution = {}
+        for player_id, player_cards in self.dealt_cards.items():
+            half_suit_cards = [card for card in player_cards if card.half_suit_id == half_suit_id]
+            if half_suit_cards:
+                distribution[player_id] = half_suit_cards
+        return distribution
+    
+    def validate_half_suit_claim(self, half_suit_id: int, assignments: Dict[str, str]) -> Dict[str, bool]:
+        """
+        Validate a claim by checking if the assignments match reality.
+        
+        Args:
+            half_suit_id: The half suit being claimed
+            assignments: Dictionary mapping card_unique_id to player_id
+            
+        Returns:
+            Dictionary with validation results:
+            - 'valid': True if all assignments are correct
+            - 'cards_exist': True if all claimed cards exist in the half suit
+            - 'assignments_correct': True if all assignments match actual holders
+        """
+        # Get all cards from the half suit from the original deck
+        half_suit_cards = [card for card in self.deck if card.half_suit_id == half_suit_id]
+        
+        if len(half_suit_cards) != 6:
+            return {'valid': False, 'cards_exist': False, 'assignments_correct': False}
+        
+        # Check if all claimed cards exist in the half suit
+        half_suit_unique_ids = {card.unique_id for card in half_suit_cards}
+        claimed_unique_ids = set(assignments.keys())
+        
+        if claimed_unique_ids != half_suit_unique_ids:
+            return {'valid': False, 'cards_exist': False, 'assignments_correct': False}
+        
+        # Check if assignments match actual card holders
+        assignments_correct = True
+        for card_unique_id, claimed_player in assignments.items():
+            actual_player = self.find_card_holder(card_unique_id)
+            if actual_player != claimed_player:
+                assignments_correct = False
+                break
+        
+        return {
+            'valid': assignments_correct,
+            'cards_exist': True,
+            'assignments_correct': assignments_correct
+        }
+    
+    def get_cards_by_team(self, half_suit_id: int, team_players: List[str]) -> List[Card]:
+        """
+        Get cards from a half suit that belong to a specific team.
+        
+        Args:
+            half_suit_id: The half suit ID
+            team_players: List of player IDs on the team
+            
+        Returns:
+            List of cards from the half suit held by the team
+        """
+        team_cards = []
+        for player_id in team_players:
+            player_cards = self.dealt_cards.get(player_id, [])
+            for card in player_cards:
+                if card.half_suit_id == half_suit_id:
+                    team_cards.append(card)
+        return team_cards
+    
+    def is_half_suit_with_team(self, half_suit_id: int, team_players: List[str]) -> bool:
+        """
+        Check if all cards from a half suit are held by a specific team.
+        
+        Args:
+            half_suit_id: The half suit ID
+            team_players: List of player IDs on the team
+            
+        Returns:
+            True if all 6 cards from the half suit are held by the team
+        """
+        distribution = self.get_half_suit_distribution(half_suit_id)
+        
+        # Check if all players holding cards from this half suit are on the team
+        for player_id in distribution.keys():
+            if player_id not in team_players:
+                return False
+        
+        # Check if we have all 6 cards
+        total_cards = sum(len(cards) for cards in distribution.values())
+        return total_cards == 6
+    
+    def is_half_suit_split(self, half_suit_id: int, team1_players: List[str], team2_players: List[str]) -> bool:
+        """
+        Check if a half suit is split between two teams.
+        
+        Args:
+            half_suit_id: The half suit ID
+            team1_players: List of player IDs on team 1
+            team2_players: List of player IDs on team 2
+            
+        Returns:
+            True if the half suit is split between teams
+        """
+        team1_has_cards = bool(self.get_cards_by_team(half_suit_id, team1_players))
+        team2_has_cards = bool(self.get_cards_by_team(half_suit_id, team2_players))
+        
+        return team1_has_cards and team2_has_cards
+    
+    def reset_deck(self) -> None:
+        """
+        Reset the deck manager to initial state.
+        """
+        self.deck = []
+        self.dealt_cards = {}
+    
+    def get_deck_status(self) -> Dict[str, int]:
+        """
+        Get status information about the deck.
+        
+        Returns:
+            Dictionary with deck status information
+        """
+        total_cards_dealt = sum(len(cards) for cards in self.dealt_cards.values())
+        
+        return {
+            'total_cards_in_deck': len(self.deck),
+            'total_cards_dealt': total_cards_dealt,
+            'players_with_cards': len(self.dealt_cards),
+            'cards_remaining_in_play': total_cards_dealt
+        }
