@@ -30,7 +30,7 @@ class GamesManager:
         self.cleanup_thread = Thread(target=self.wrapper_clean_up, daemon=True)
         self.cleanup_thread.start()
 
-    async def _brodcast_message(self, game_id: str, msg):
+    async def _broadcast_message(self, game_id: str, msg):
         with self.lock:
             to_rm = []
             for plyr_id, wss in self.state[game_id].websockets.items():
