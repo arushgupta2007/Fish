@@ -64,7 +64,7 @@ async def websocket_endpoint(ws: WebSocket):
                         logger.info(f"Start Request - {game_id} - {plyr_id}")
                         if not gamesManager.can_start(game_id, plyr_id):
                             logger.warning(f"Start Request Failed - {game_id} - {plyr_id} - Not authorized")
-                            await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "You cannot the start the game" } })
+                            await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "You cannot start the game" } })
                             continue
 
                         res = await gamesManager.start_game(game_id)
