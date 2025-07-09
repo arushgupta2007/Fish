@@ -301,9 +301,9 @@ class Game:
                 claimant=claimant_id,
                 half_suit=hs,
                 is_for_other=False,
-                is_counter=True,
+                is_counter=False,
                 success=False,
-                scenario=ClaimScenario.CLAIM_COUNTER
+                scenario=ClaimScenario.CLAIM_WITHIN_TEAM
             )
         )
         if self._check_assignment(assignment):
