@@ -143,8 +143,8 @@ class WebSocketMessageAskRequest(BaseModel):
     data: WebSocketMessageAskRequestData
 
 class WebSocketMessageClaimRequestData(BaseModel):
-    half_suit_id: Optional[HalfSuits]
-    assignment: Optional[Dict[str, str]]
+    half_suit_id: Optional[HalfSuits] = None
+    assignment: Optional[Dict[str, str]] = None
 
 class WebSocketMessageClaimRequest(BaseModel):
     type: ApiEvent

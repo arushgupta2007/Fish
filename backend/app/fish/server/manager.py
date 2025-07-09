@@ -4,6 +4,8 @@ from threading import RLock, Thread
 from datetime import datetime, timezone
 import asyncio
 
+from fastapi.websockets import WebSocketState
+
 from ..models.composite import ClaimRecord, OperationResult
 from ..models.enums import GameStatus, HalfSuits, ApiEvent
 from ..utils.misc import valid_id, valid_name
@@ -35,7 +37,8 @@ class GamesManager:
             to_rm = []
             for plyr_id, wss in self.state[game_id].websockets.items():
                 try:
-                    await wss.send_json(msg)
+                    if wss.application_state == WebSocketState.CONNECTED and wss.client_state == WebSocketState.CONNECTED:
+                        await wss.send_json(msg)
                 except WebSocketDisconnect as _:
                     if self.state[game_id].game.has_player(plyr_id):
                         self.state[game_id].game.leave_player(plyr_id)
