@@ -54,4 +54,3 @@ volumes:
 networks:
   half-suit-network:
     driver: bridge
-

@@ -374,7 +374,7 @@ user_uploads/
 *.tmp
 *.temp
 
-# Nix
-shell.nix
-.envrc
+# Nixos
 .direnv
+.envrc
+shell.nix
