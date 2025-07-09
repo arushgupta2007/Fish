@@ -52,11 +52,11 @@ class GamesManager:
                 del self.state[game_id].websockets[plyr_id["id"]]
 
         for obj in to_rm:
-            await self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
+            await self._broadcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
 
     async def _claim_helper(self, game_id: str, claim_type: ApiEvent, res: ClaimRecord, turn: str | None, done: bool, assignment: Dict[str, str]):
         with self.lock:
-            await self._brodcast_message(game_id, {
+            await self._broadcast_message(game_id, {
                 "type": claim_type,
                 "data": {
                     "player_id": res.claimant,
@@ -71,7 +71,7 @@ class GamesManager:
             if done:
                 t0 = self.state[game_id].game.teams[0].score
                 t1 = self.state[game_id].game.teams[1].score
-                await self._brodcast_message(game_id, {
+                await self._broadcast_message(game_id, {
                     "type": ApiEvent.GAME_FINISHED,
                     "data": {
                         "winning_team": 0 if t0 > t1 else 1,
@@ -111,7 +111,7 @@ class GamesManager:
 
             await asyncio.gather(
                 ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "players": players, "success": True } }),
-                self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_JOINED, "data": { "id": plyr_name, "name": plyr_name, "team": team.value } })
+                self._broadcast_message(game_id, { "type": ApiEvent.PLAYER_JOINED, "data": { "id": plyr_name, "name": plyr_name, "team": team.value } })
             )
             return True
 
@@ -132,7 +132,7 @@ class GamesManager:
 
                 if plyr_id in self.state[game_id].websockets:
                     del self.state[game_id].websockets[plyr_id]
-                await self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
+                await self._broadcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
 
     async def swap_teams(self, game_id: str, plyr_id: str):
         # TODO
@@ -159,7 +159,7 @@ class GamesManager:
                     ws = self.state[game_id].websockets[pid]
                     promises.append(ws.send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in plyr.hand ] } }))
                 await asyncio.gather(*promises)
-                await self._brodcast_message(game_id, { "type": ApiEvent.GAME_START, "data": { "starting_player": st_plyr, "num_cards": num_cards } })
+                await self._broadcast_message(game_id, { "type": ApiEvent.GAME_START, "data": { "starting_player": st_plyr, "num_cards": num_cards } })
                 return OperationResult(success=True, result=st_plyr, error=None)
             except Exception as e:
                 return OperationResult(success=False, result=None, error=str(e))
@@ -182,7 +182,7 @@ class GamesManager:
                     self.state[game_id].websockets[asker_id].send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in asker_hand ] } }),
                     self.state[game_id].websockets[respondant_id].send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in respondant_hand ] } })
                 )
-                await self._brodcast_message(game_id, {
+                await self._broadcast_message(game_id, {
                     "type": ApiEvent.ASK_REQUEST,
                     "data": {
                         "from_id": asker_id,
@@ -215,7 +215,7 @@ class GamesManager:
                 return OperationResult(success=False, result=None, error="No game found")
             try:
                 res = self.state[game_id].game.claim_opp(claimant_id, hs)
-                await self._brodcast_message(game_id, {
+                await self._broadcast_message(game_id, {
                     "type": ApiEvent.CLAIM_OPP,
                     "data": {
                         "player_id": claimant_id,
@@ -261,7 +261,7 @@ class GamesManager:
 
             try:
                 res = self.state[game_id].game.claim_counter_pass(passer_id)
-                await self._brodcast_message(game_id, {
+                await self._broadcast_message(game_id, {
                     "type": ApiEvent.CLAIM_OPP_PASS,
                     "data": {
                         "player_id": passer_id,
