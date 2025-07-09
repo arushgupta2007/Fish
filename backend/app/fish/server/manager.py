@@ -49,7 +49,7 @@ class GamesManager:
                             obj["new_host"] = self.state[game_id].host
                     to_rm.append(obj)
             for plyr_id in to_rm:
-                del self.state[game_id].websockets[plyr_id]
+                del self.state[game_id].websockets[plyr_id["id"]]
 
         for obj in to_rm:
             await self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
