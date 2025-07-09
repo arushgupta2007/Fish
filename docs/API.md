@@ -256,7 +256,7 @@ Sent when a player makes a claim for the opponent team (i.e, all players in the 
 
 #### 9. Claim Pass Event
 
-Sent when a player passes on the oppurtunity to counter claim.
+Sent when a player passes on the opportunity to counter claim.
 
 **Client to Server:**
 ```json
