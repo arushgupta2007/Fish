@@ -108,3 +108,19 @@ class GameStatus(IntEnum):
     ACTIVE_ASK = 1
     ACTIVE_COUNTER = 2
     FINISHED = 3
+
+class ApiEvent(StrEnum):
+    NEW_CONNECTION = "new_connection"
+    PLAYER_JOINED = "player_join"
+    PLAYER_LEFT = "player_left"
+    HAND = "hand"
+    GAME_START = "game_start"
+    ASK_REQUEST = "ask"
+    CLAIM = "claim"
+    CLAIM_OPP = "claim_opp"
+    CLAIM_OPP_PASS = "claim_opp_pass"
+    CLAIM_OPP_UNOPP = "claim_opp_unopp"
+    CLAIM_COUNTER = "claim_counter"
+    GAME_FINISHED = "game_finished"
+
+    ERROR = "error"

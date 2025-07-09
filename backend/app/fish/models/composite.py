@@ -2,8 +2,7 @@ from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, model_validator
 from pydantic.fields import Field
 
-from ..utils.constants import ApiEvent
-from .enums import CardRank, CardSuit, HalfSuits, TeamId, ClaimScenario, GameHandCompleteTurnTransfer
+from .enums import CardRank, CardSuit, HalfSuits, TeamId, ClaimScenario, GameHandCompleteTurnTransfer, ApiEvent
 from ..utils.rank_suite import valid_card, get_half_suit, unique_card_id
 
 class Card(BaseModel):
@@ -107,7 +106,7 @@ class ClaimRecord(BaseModel):
 class GameSettings(BaseModel):
     """Game Settings"""
     min_players: int = 6
-    max_players: int = 6
+    max_players: int = 9
 
     allow_bluffs: bool = True
 
@@ -115,7 +114,7 @@ class GameSettings(BaseModel):
     time_counter: Optional[int] = None         # In ms     TODO: Implement this
 
     hand_complete_turn_transfer: GameHandCompleteTurnTransfer = GameHandCompleteTurnTransfer.RANDOM
-    visible_ask_history: Optional[int] = 2
+    visible_ask_history: Optional[int] = 1
 
 
 class OperationResult(BaseModel):
@@ -126,6 +125,14 @@ class OperationResult(BaseModel):
 
 class WebSocketMessageGeneral(BaseModel):
     type: ApiEvent
+
+class WebSocketMessageInitialConnectionData(BaseModel):
+    game_id: str
+    player_id: str
+
+class WebSocketMessageInitialConnection(BaseModel):
+    type: ApiEvent
+    data: WebSocketMessageInitialConnectionData
 
 class WebSocketMessageAskRequestData(BaseModel):
     to_id: str

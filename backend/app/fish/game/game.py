@@ -1,19 +1,30 @@
 from typing import List, Optional, Dict, Tuple
 from random import shuffle, choice
 from datetime import datetime, timezone
+import os
+import logging
 
 from ..models.enums import CardRank, CardSuit, ClaimScenario, GameHandCompleteTurnTransfer, GameStatus, HalfSuits, TeamId
 from ..models.composite import AskRecord, ClaimRecord, GameSettings, HalfSuit, Player, Team, Card
 from ..utils.card import create_all_cards, create_half_suits
 from ..utils.rank_suite import id_to_rank_suit, unique_card_id
 from ..utils.misc import valid_name, valid_id
+from ..utils.constants import DebugDefaultGameSettings
+
+logger = logging.getLogger(__name__)
+
 
 class Game:
     """Game Manager"""
 
     def __init__(self, settings: Optional[GameSettings] = None):
+        if os.getenv("DEBUG") == "True":
+            default_game_settings = DebugDefaultGameSettings
+        else:
+            default_game_settings = GameSettings()
+
         if settings is None:
-            settings = GameSettings()
+            settings = default_game_settings
         self.settings = settings
 
         self.status = GameStatus.LOBBY
@@ -123,7 +134,7 @@ class Game:
                 return c
         raise Exception("Card not found")
 
-    def join_player(self, id: str, name: str):
+    def join_player(self, id: str, name: str) -> TeamId:
         """Join Player"""
         if self.status != GameStatus.LOBBY:
             raise Exception("Players cannot join an active/finished game")
@@ -145,6 +156,7 @@ class Game:
         team = self._nxt_plyr_team()
         self.players[id] = Player(id=id, name=name, team=team, hand=[])
         self.teams[team].players.append(id)
+        return team
 
     def leave_player(self, id: str):
         """Remove Player. Still unsure what this means when the game is not in lobby"""

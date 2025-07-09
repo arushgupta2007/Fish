@@ -1,24 +1,10 @@
-from enum import StrEnum
 from datetime import timedelta
+
+from ..models.composite import GameSettings
 
 CLEANUP_INTERVAL = timedelta(minutes=60)
 GAME_TIMEOUT = timedelta(hours=24)
 
 GAME_ID_LENGTH = 9
 
-class ApiEvent(StrEnum):
-    NEW_CONNECTION_RESPONSE = "NEW_CONNECTION_RESPONSE"
-    PLAYER_JOINED = "PLAYER_JOINED"
-    PLAYER_LEFT = "PLAYER_LEFT"
-    HOST_CHANGE = "HOST_CHANGE"
-    HAND = "HAND"
-    GAME_START = "GAME_START"
-    ASK_REQUEST = "ASK_REQUEST"
-    CLAIM = "CLAIM"
-    CLAIM_OPP = "CLAIM_OPP"
-    CLAIM_OPP_PASS = "CLAIM_OPP_PASS"
-    CLAIM_OPP_UNOPP = "CLAIM_OPP_UNOPP"
-    CLAIM_COUNTER = "CLAIM_COUNTER"
-    GAME_FINISHED = "GAME_FINISHED"
-
-    ERROR = "ERROR"
+DebugDefaultGameSettings = GameSettings(min_players=1, max_players=100)

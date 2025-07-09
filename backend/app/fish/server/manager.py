@@ -4,13 +4,11 @@ from threading import RLock, Thread
 from datetime import datetime, timezone
 import asyncio
 
-from fastapi.exceptions import WebSocketException
-
 from ..models.composite import ClaimRecord, OperationResult
-from ..models.enums import GameStatus, HalfSuits
+from ..models.enums import GameStatus, HalfSuits, ApiEvent
 from ..utils.misc import valid_id, valid_name
 from ..utils.rank_suite import id_to_rank_suit
-from ..utils.constants import CLEANUP_INTERVAL, GAME_ID_LENGTH, GAME_TIMEOUT, ApiEvent
+from ..utils.constants import CLEANUP_INTERVAL, GAME_ID_LENGTH, GAME_TIMEOUT
 from ..game.game import Game
 
 class GameState:
@@ -85,20 +83,12 @@ class GamesManager:
                 })
 
     async def new_connection(self, game_id: str, plyr_name: str, ws: WebSocket) -> bool:
-        if not valid_id(game_id) and len(game_id) == GAME_ID_LENGTH and game_id.isascii() and game_id.islower():
-            try:
-                await ws.send_json({ "type": ApiEvent.NEW_CONNECTION_RESPONSE, "data": { "success": False, "error": "Game ID is not valid" } })
-                await ws.close()
-            except WebSocketException as _:
-                pass
+        if not valid_id(game_id) or len(game_id) != GAME_ID_LENGTH or not game_id.isascii() or not game_id.isalpha() or not game_id.islower():
+            await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Game ID is not valid" } })
             return False
 
         if not valid_name(plyr_name):
-            try:
-                await ws.send_json({ "type": ApiEvent.NEW_CONNECTION_RESPONSE, "data": { "success": False, "error": "Player Name is not valid" } })
-                await ws.close()
-            except WebSocketException as _:
-                pass
+            await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Player Name is not valid" } })
             return False
 
         with self.lock:
@@ -109,19 +99,19 @@ class GamesManager:
                 self.state[game_id].host = plyr_name
 
             self.state[game_id].websockets[plyr_name] = ws
-            self.state[game_id].game.join_player(plyr_name, plyr_name)
+            team = self.state[game_id].game.join_player(plyr_name, plyr_name)
 
 
             players = []
             for plyr in self.state[game_id].game.players.values():
-                obj: Dict[str, str | bool] = { "id": plyr.id, "name": plyr.name }
+                obj: Dict[str, str | bool | int] = { "id": plyr.id, "name": plyr.name, "team": plyr.team.value }
                 if plyr.id == self.state[game_id].host:
                     obj["host"] = True
                 players.append(obj)
 
             await asyncio.gather(
-                ws.send_json({ "type": ApiEvent.NEW_CONNECTION_RESPONSE, "data": { "players": players, "success": True } }),
-                self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_JOINED, "data": { "id": plyr_name, "name": plyr_name } })
+                ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "players": players, "success": True } }),
+                self._brodcast_message(game_id, { "type": ApiEvent.PLAYER_JOINED, "data": { "id": plyr_name, "name": plyr_name, "team": team.value } })
             )
             return True
 
@@ -148,7 +138,7 @@ class GamesManager:
         # TODO
         pass
 
-    async def can_start(self, game_id: str, plyr_id: str) -> bool:
+    def can_start(self, game_id: str, plyr_id: str) -> bool:
         with self.lock:
             return game_id in self.state and self.state[game_id].host == plyr_id
 
@@ -159,6 +149,9 @@ class GamesManager:
 
             try:
                 st_plyr = self.state[game_id].game.start_game()
+
+                num_cards = { pid: len(plyr.hand) for pid, plyr in self.state[game_id].game.players.items() }
+
                 promises = []
                 for pid, plyr in self.state[game_id].game.players.items():
                     if pid not in self.state[game_id].websockets:
@@ -166,7 +159,7 @@ class GamesManager:
                     ws = self.state[game_id].websockets[pid]
                     promises.append(ws.send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in plyr.hand ] } }))
                 await asyncio.gather(*promises)
-                await self._brodcast_message(game_id, { "type": ApiEvent.GAME_START, "data": { "starting_player": st_plyr } })
+                await self._brodcast_message(game_id, { "type": ApiEvent.GAME_START, "data": { "starting_player": st_plyr, "num_cards": num_cards } })
                 return OperationResult(success=True, result=st_plyr, error=None)
             except Exception as e:
                 return OperationResult(success=False, result=None, error=str(e))
@@ -192,8 +185,8 @@ class GamesManager:
                 await self._brodcast_message(game_id, {
                     "type": ApiEvent.ASK_REQUEST,
                     "data": {
-                        "asker_id": asker_id,
-                        "respondant_id": respondant_id,
+                        "from_id": asker_id,
+                        "to_id": respondant_id,
                         "card_id": card_id,
                         "success": res.success,
                         "turn": self.state[game_id].game.player_turn
