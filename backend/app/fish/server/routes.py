@@ -26,7 +26,7 @@ async def websocket_endpoint(ws: WebSocket):
             logger.info(f"JSON: {initial_data}")
             msg = WebSocketMessageInitialConnection.model_validate_json(initial_data)
             if msg.type != ApiEvent.NEW_CONNECTION:
-                await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Invalid Request" } })
+                await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.NEW_CONNECTION, "error": "Invalid Request" } })
                 continue
 
             game_id, plyr_id = msg.data.game_id, msg.data.player_id
@@ -40,7 +40,7 @@ async def websocket_endpoint(ws: WebSocket):
         except Exception as e:
             logger.info(f"JSON Parse error: {repr(e)}")
             try:
-                await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Invalid Request" } })
+                await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.NEW_CONNECTION, "error": "Invalid Request" } })
             except WebSocketDisconnect:
                 return
 
@@ -63,13 +63,13 @@ async def websocket_endpoint(ws: WebSocket):
                     logger.info(f"Start Request - {game_id} - {plyr_id}")
                     if not gamesManager.can_start(game_id, plyr_id):
                         logger.warning(f"Start Request Failed - {game_id} - {plyr_id} - Not authorized")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "You cannot start the game" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.GAME_START, "error": "You cannot start the game" } })
                         continue
 
                     res = await gamesManager.start_game(game_id)
                     if not res.success:
                         logger.warning(f"Start Request Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.GAME_START, "error": f"Something went wrong: {res.error}" } })
 
                 case ApiEvent.ASK_REQUEST:
                     msg = WebSocketMessageAskRequest.model_validate_json(data)
@@ -80,13 +80,13 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Ask Request Failed - {game_id} - {plyr_id}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.ASK_REQUEST, "error": f"{res.error}" } })
 
                 case ApiEvent.CLAIM:
                     msg = WebSocketMessageClaimRequest.model_validate_json(data)
                     if msg.data.half_suit_id is None or msg.data.assignment is None:
                         logger.warning(f"Claim Request Failed - {game_id} - {plyr_id} - Invalid Request")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "Invalid Request" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM, "error": "Invalid Request" } })
                         continue
 
                     logger.info(f"Claim Request - {game_id} - {plyr_id} claims {msg.data.half_suit_id}")
@@ -94,13 +94,13 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Claim Request Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM, "error": f"Something went wrong: {res.error}" } })
 
                 case ApiEvent.CLAIM_OPP:
                     msg = WebSocketMessageClaimRequest.model_validate_json(data)
                     if msg.data.half_suit_id is None:
                         logger.warning(f"Claim For Opponent Request Failed - {game_id} - {plyr_id} - Invalid Request")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "Invalid Request" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_OPP, "error": "Invalid Request" } })
                         continue
 
                     logger.info(f"Claim For Opponent Request - {game_id} - {plyr_id} claims {msg.data.half_suit_id}")
@@ -108,13 +108,13 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Claim For Opponent Request Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_OPP, "error": f"Something went wrong: {res.error}" } })
 
                 case ApiEvent.CLAIM_OPP_UNOPP:
                     msg = WebSocketMessageClaimRequest.model_validate_json(data)
                     if msg.data.assignment is None:
                         logger.warning(f"Claim Request Unopposed Failed - {game_id} - {plyr_id} - Invalid Request")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "Invalid Request" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_OPP_UNOPP, "error": "Invalid Request" } })
                         continue
 
                     logger.info(f"Claim For Opponent Unopposed Request - {game_id} - {plyr_id} claims {msg.data.half_suit_id}")
@@ -122,7 +122,7 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Claim Request Unopposed Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_OPP_UNOPP, "error": f"Something went wrong: {res.error}" } })
 
                 case ApiEvent.CLAIM_OPP_PASS:
                     logger.info(f"Claim Pass Request - {game_id} - {plyr_id}")
@@ -130,13 +130,13 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Claim Pass Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_OPP_PASS, "error": f"Something went wrong: {res.error}" } })
 
                 case ApiEvent.CLAIM_COUNTER:
                     msg = WebSocketMessageClaimRequest.model_validate_json(data)
                     if msg.data.assignment is None:
                         logger.warning(f"Claim Counter Failed - {game_id} - {plyr_id} - Invalid Request")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": "Invalid Request" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_COUNTER, "error": "Invalid Request" } })
                         continue
 
                     logger.info(f"Claim Counter Request - {game_id} - {plyr_id}")
@@ -144,7 +144,7 @@ async def websocket_endpoint(ws: WebSocket):
 
                     if not res.success:
                         logger.warning(f"Claim Counter Failed - {game_id} - {plyr_id} - {res.error}")
-                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "error": f"Something went wrong: {res.error}" } })
+                        await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.CLAIM_COUNTER, "error": f"Something went wrong: {res.error}" } })
 
                 case _:
                     logger.warning(f"Invalid Request - {game_id} - {plyr_id}")
