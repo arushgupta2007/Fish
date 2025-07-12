@@ -16,7 +16,7 @@ COPY ./backend .
 COPY --from=build /src/build.tar.gz /src
 RUN tar -xzf build.tar.gz && rm build.tar.gz
 RUN ls -la
-RUN cd dist
+RUN mkdir static && mkdir templates
 RUN cp dist/static/* static/ -r
 RUN cp dist/* static/ -r
 RUN cp dist/index.html templates/
