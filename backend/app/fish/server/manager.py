@@ -3,6 +3,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from threading import RLock, Thread
 from datetime import datetime, timezone
 import asyncio
+import logging
 
 from fastapi.websockets import WebSocketState
 
@@ -12,6 +13,8 @@ from ..utils.misc import valid_id, valid_name
 from ..utils.rank_suite import id_to_rank_suit
 from ..utils.constants import CLEANUP_INTERVAL, GAME_ID_LENGTH, GAME_TIMEOUT
 from ..game.game import Game
+
+logger = logging.getLogger(__name__)
 
 class GameState:
     websockets: Dict[str, WebSocket] = {}
@@ -80,6 +83,7 @@ class GamesManager:
                 ws = self.state[game_id].websockets[pid]
                 promises.append(ws.send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in plyr.hand ] } }))
             await asyncio.gather(*promises)
+
             if done:
                 t0 = self.state[game_id].game.teams[0].score
                 t1 = self.state[game_id].game.teams[1].score
@@ -96,14 +100,18 @@ class GamesManager:
 
     async def new_connection(self, game_id: str, plyr_name: str, ws: WebSocket) -> bool:
         if not valid_id(game_id) or len(game_id) != GAME_ID_LENGTH or not game_id.isascii() or not game_id.isalpha() or not game_id.islower():
-            await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Game ID is not valid" } })
+            await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.NEW_CONNECTION, "error": "Game ID is not valid" } })
             return False
 
         if not valid_name(plyr_name):
-            await ws.send_json({ "type": ApiEvent.NEW_CONNECTION, "data": { "success": False, "error": "Player Name is not valid" } })
+            await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.NEW_CONNECTION, "error": "Player Name is not valid" } })
             return False
 
         with self.lock:
+            if game_id in self.state and self.state[game_id].game.has_player(plyr_name):
+                await ws.send_json({ "type": ApiEvent.ERROR, "data": { "type": ApiEvent.NEW_CONNECTION, "error": "Player with that name already exists" } })
+                return False
+
             if game_id not in self.state:
                 self.state[game_id] = GameState({}, Game(), plyr_name)
 
@@ -133,17 +141,19 @@ class GamesManager:
                 if self.state[game_id].game.has_player(plyr_id):
                     self.state[game_id].game.leave_player(plyr_id)
 
+                if len(self.state[game_id].game.players) == 0:
+                    del self.state[game_id]
+                    logger.info("Everyone Disconnected")
+                    return
+
                 obj: Dict[str, str | None] = { "id": plyr_id }
                 if plyr_id == self.state[game_id].host:
-                    if len(self.state[game_id].game.players) == 0:
-                        self.state[game_id].host = None
-                        obj["new_host"] = None
-                    else:
-                        self.state[game_id].host = next(iter(self.state[game_id].game.players))
-                        obj["new_host"] = self.state[game_id].host
+                    self.state[game_id].host = next(iter(self.state[game_id].game.players))
+                    obj["new_host"] = self.state[game_id].host
 
                 if plyr_id in self.state[game_id].websockets:
                     del self.state[game_id].websockets[plyr_id]
+
                 await self._broadcast_message(game_id, { "type": ApiEvent.PLAYER_LEFT, "data": obj })
 
     async def swap_teams(self, game_id: str, plyr_id: str):
@@ -249,7 +259,7 @@ class GamesManager:
 
             try:
                 (res, turn, done) = self.state[game_id].game.claim_opp_unopposed(assignment)
-                await self._claim_helper(game_id, ApiEvent.CLAIM, res, turn, done, assignment)
+                await self._claim_helper(game_id, ApiEvent.CLAIM_OPP_UNOPP, res, turn, done, assignment)
                 return OperationResult(success=True, result=None, error=None)
             except Exception as e:
                 return OperationResult(success=False, result=None, error=str(e))
