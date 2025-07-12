@@ -165,7 +165,6 @@ docker build -t half-suit-backend .
 **Backend**:
 - `PORT` - Server port (default: 8000)
 - `CORS_ORIGINS` - Allowed origins
-- `REDIS_URL` - Redis connection string
 - `SECRET_KEY` - JWT secret key
 
 **Frontend**:
