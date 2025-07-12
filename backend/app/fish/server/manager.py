@@ -59,6 +59,7 @@ class GamesManager:
 
     async def _claim_helper(self, game_id: str, claim_type: ApiEvent, res: ClaimRecord, turn: str | None, done: bool, assignment: Dict[str, str]):
         with self.lock:
+            num_cards = { pid: len(plyr.hand) for pid, plyr in self.state[game_id].game.players.items() }
             await self._broadcast_message(game_id, {
                 "type": claim_type,
                 "data": {
@@ -67,10 +68,18 @@ class GamesManager:
                     "assignment": assignment,
                     "success": res.success,
                     "point_to": res.point_to,
-                    "turn": turn
+                    "turn": turn,
+                    "num_cards": num_cards
                 }
             })
 
+            promises = []
+            for pid, plyr in self.state[game_id].game.players.items():
+                if pid not in self.state[game_id].websockets:
+                    continue
+                ws = self.state[game_id].websockets[pid]
+                promises.append(ws.send_json({ "type": ApiEvent.HAND, "data": { "hand": [ c.id for c in plyr.hand ] } }))
+            await asyncio.gather(*promises)
             if done:
                 t0 = self.state[game_id].game.teams[0].score
                 t1 = self.state[game_id].game.teams[1].score
