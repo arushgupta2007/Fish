@@ -13,16 +13,12 @@ import { truncateString, unique_card_id } from '@/utils/utils'
 import { TRUNCATE_NAME } from '@/utils/constants'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import * as z from "zod";
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { toast } from 'sonner'
-import { half_suit_id } from '@/utils/card'
-import { Separator } from '@radix-ui/react-select'
 
 const State = {
   REGISTER: "REGISTER",
@@ -307,10 +303,11 @@ export default function Game() {
     if (arr.length == 0) return <span className="text-sm italic text-gray-400">No questions asked</span>
     return arr
   }
-  function claimOppDefault(arr: any[]) {
-    if (arr.length == 0) return <span className="text-sm italic text-gray-400">No players passed</span>
-    return arr
-  }
+
+  // function claimOppDefault(arr: any[]) {
+  //   if (arr.length == 0) return <span className="text-sm italic text-gray-400">No players passed</span>
+  //   return arr
+  // }
 
   function getClaimedSuitElement(hs: HalfSuits, idx: number) {
     const helper = () => {
@@ -479,6 +476,7 @@ export default function Game() {
 
     var new_ask = structuredClone(askRecord)
     new_ask.push(api_data)
+
     setAskRecord(new_ask)
   }
   const handleGeneralClaim = (api_data: ApiMessageClaim) => {
@@ -968,7 +966,7 @@ export default function Game() {
                     }
                   </div>
                   <div className="border-1 border-gray-200"></div>
-                  <div className="flex flex-col text-sm sm:text-base">
+                  {/*<div className="flex flex-col text-sm sm:text-base">
                     {claimOppDefault(claimOppPassed.map((plyr) => {
                       return (
                         <div className="border-1 border-gray-300 w-full p-2 flex flex-row justify-between" key={plyr.id}>
@@ -980,7 +978,7 @@ export default function Game() {
                       )
                     }))}
                   </div>
-                  <div className="border-1 border-gray-200"></div>
+                  <div className="border-1 border-gray-200"></div>*/}
                   <Dialog>
                     <Form {...claimOppUnoppForm}>
                       <form ref={claimOppUnoppFormRef} onSubmit={claimOppUnoppForm.handleSubmit(claimOppUnopp)}>
@@ -1492,7 +1490,7 @@ export default function Game() {
                 <h1 className='text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold'>Ask History:</h1>
                 <div className="flex flex-col gap-2 w-full px-2">
                   <div className="flex flex-col text-sm sm:text-base">
-                    {askDefault(askRecord.map((ask, i) => getAskElement(ask, i + 1)))}
+                    {askDefault(askRecord.slice(-2).reverse().map((ask, i) => getAskElement(ask, i + 1)))}
                   </div>
                 </div>
               </div>

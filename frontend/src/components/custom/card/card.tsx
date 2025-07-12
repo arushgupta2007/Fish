@@ -61,7 +61,7 @@ type CardProps = {
   idx_hs: number
 }
 
-export default function CardComponent({ card, cnt_hs, idx_hs }: CardProps) {
+export default function CardComponent({ card, idx_hs }: CardProps) {
 
   const getCard = () => {
     switch (card.id) {

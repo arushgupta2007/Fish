@@ -1,9 +1,12 @@
 import os
 import logging
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from .fish.server import routes
 from .fish.utils.logs import CustomLogFormatter
@@ -35,6 +38,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def home():
+app.mount("/static", StaticFiles(directory="static"), name="assets")
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/health")
+def health():
     return { "Hello": "World", "timestamp": datetime.now(timezone.utc) }
+
+@app.get("/")
+async def serve_spa(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})

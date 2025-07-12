@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
 import { Label } from "../ui/label"
@@ -32,7 +32,7 @@ export default function Register({ plyr_name_error, loading, submit }: RegisterP
     resolver: zodResolver(inputSchema)
   })
 
-  const onSubmit = (data: SubmitHandler<UserInput>) => {
+  const onSubmit = (data: any) => {
     // @ts-ignore
     submit(data.game_id, data.player_name)
   }
