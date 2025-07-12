@@ -178,7 +178,7 @@ class Game:
 
     def has_player(self, id: str):
         """Checks if a player is present"""
-        return self._find_plyr_in_team(id) is not None
+        return id in self.players
 
     def team_swap_player(self, id: str):
         """Swap Teams for a player"""
