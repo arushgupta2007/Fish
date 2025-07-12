@@ -55,8 +55,8 @@ export default function Register({ plyr_name_error, loading, submit }: RegisterP
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="gameIdInp">Player Name</Label>
-                <Input id="gameIdInp" type="text" placeholder="HarryPotter" required {...register('player_name')} />
+                <Label htmlFor="playerNameInp">Player Name</Label>
+                <Input id="playerNameInp" type="text" placeholder="HarryPotter" required {...register('player_name')} />
                 <span className='text-xs text-gray-500'>Alphanumeric string</span>
                 { errors.player_name && <span className="text-sm text-red-500">{ errors.player_name.message }</span> }
                 { plyr_name_error && <span className="text-sm text-red-500">Player with this name already exists</span> }
