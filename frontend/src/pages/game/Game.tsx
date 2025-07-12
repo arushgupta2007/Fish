@@ -417,16 +417,22 @@ export default function Game() {
     }
 
     if (!(api_data.id in players)) return;
-    delete players[api_data.id]
+    
+    // Create a shallow copy of the players object
+    const newPlayers = { ...players };
+    delete newPlayers[api_data.id];
 
     if (api_data.new_host) {
-      if (!(api_data.new_host in players)) {
-        console.error("Handle Player Left: New Host not in players")
-        return
+      if (!(api_data.new_host in newPlayers)) {
+        console.error("Handle Player Left: New Host not in players");
+        return;
       }
 
-      players[api_data.new_host].host = true
+      newPlayers[api_data.new_host].host = true;
     }
+
+    // Update the state with the new players object
+    setPlayers(newPlayers);
   }
   const handleHand = (api_data: ApiMessageHand) => {
     var new_hand: Record<HalfSuits, Card[]> = {}
