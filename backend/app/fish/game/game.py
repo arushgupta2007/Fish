@@ -174,6 +174,7 @@ class Game:
             return
 
         # TODO: What to do in this case? Abort game?
+        del self.players[id]
         self.status = GameStatus.FINISHED
 
     def has_player(self, id: str):
